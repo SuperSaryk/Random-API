@@ -1,0 +1,78 @@
+/* Dark Theme Styles */
+body {
+    background-color: #1a1a1a; /* Very dark grey background */
+    color: #e0e0e0; /* Light grey text for readability */
+    font-family: Arial, sans-serif; /* A common, readable font */
+    margin: 20px; /* Add some margin around the content */
+    position: relative; /* Needed for positioning absolute children like the button */
+    min-height: 100vh; /* Ensure body takes full viewport height */
+}
+
+h1 {
+    color: #f0f0f0; /* Slightly lighter heading color */
+}
+
+/* Button Container Styling */
+.button-container {
+    position: absolute; /* Position relative to the body */
+    top: 20px; /* 20px from the top */
+    right: 20px; /* 20px from the right */
+    z-index: 1000; /* Ensure button is on top of other content */
+}
+
+.action-button {
+    background-color: #4CAF50; /* Green */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.action-button:hover {
+    background-color: #45a049;
+}
+
+table {
+    width: 80%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background-color: #2b2b2b; /* Darker background for the table itself */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+    border-radius: 8px; /* Slightly rounded corners for the table */
+    overflow: hidden; /* Ensures rounded corners apply to borders */
+}
+
+th, td {
+    border: 1px solid #444; /* Darker, subtle borders */
+    padding: 12px 15px; /* More padding for better spacing */
+    text-align: left;
+    color: #e0e0e0; /* Light text for table cells */
+}
+
+th {
+    background-color: #3a3a3a; /* Darker background for table headers */
+    color: #f0f0f0; /* Light text for headers */
+    font-weight: bold;
+    text-transform: uppercase; /* Make headers uppercase for emphasis */
+    letter-spacing: 0.5px;
+}
+
+/* Styling for alternating rows (optional, but good for readability) */
+tbody tr:nth-child(even) {
+    background-color: #333333; /* Slightly different shade for even rows */
+}
+
+/* Hover effect for rows */
+tbody tr:hover {
+    background-color: #444444; /* Lighter shade on hover */
+    cursor: pointer; /* Indicates interactivity */
+}
+
+/* Styling for the loading/error message */
+#data-table-container p {
+    color: #aaaaaa; /* Medium grey for messages */
+    font-style: italic;
+}
