@@ -7,10 +7,10 @@ const JSONBIN_ACCESS_KEY = '$2a$10$5yv94w0X.ZrPImzoCbZC5usPV5T2XgdynZR4N1Kd916N8
 
 
 // --- State Variables ---
-let globalOriginalRecords = []; // Stores the untouched data from the API
-let globalDisplayedRecords = []; // Stores the data currently being displayed (can be filtered/modified)
-let isEnhancedModeActive = false; // Flag to track if the filter/enhance mode is on
-let hasEfOddsBeenAppliedOnce = false; // Flag to ensure +25% is applied only once per activation cycle
+let globalOriginalRecords = [];
+let globalDisplayedRecords = [];
+let isEnhancedModeActive = false;
+let hasEfOddsBeenAppliedOnce = false;
 
 /**
  * Calculates lay_to_back odds from lay_odds and commission.
@@ -31,11 +31,15 @@ function calculateLayToBackOdds(lay_odds, commission = 0.03) {
  */
 function renderTable(recordsToDisplay) {
     const container = document.getElementById(TABLE_CONTAINER_ID);
-    container.innerHTML = ''; // Clear previous content
+    if (!container) {
+        console.error('Error: Table container element not found with ID:', TABLE_CONTAINER_ID);
+        return; // Exit if container isn't found
+    }
+    container.innerHTML = '';
 
     if (!Array.isArray(recordsToDisplay) || recordsToDisplay.length === 0) {
         container.innerHTML = '<p>No data found or data is empty in the expected array format (data.record.data).</p>';
-        // console.warn('Attempted to render with no records or empty array:', recordsToDisplay); // Uncomment for debugging
+        console.warn('Attempted to render with no records or empty array:', recordsToDisplay);
         return;
     }
 
@@ -51,7 +55,6 @@ function renderTable(recordsToDisplay) {
         return;
     }
 
-    // Header creation logic
     const originalHeaders = Object.keys(firstRecord);
     const desiredHeaders = [];
     const insertAfterHeader = 'lay_odds';
@@ -73,7 +76,6 @@ function renderTable(recordsToDisplay) {
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
-    // Body population logic
     recordsToDisplay.forEach(record => {
         const row = document.createElement('tr');
         
@@ -83,13 +85,12 @@ function renderTable(recordsToDisplay) {
                 const layOdds = parseFloat(record.lay_odds);
                 if (!isNaN(layOdds)) {
                     const calculatedValue = calculateLayToBackOdds(layOdds);
-                    td.textContent = calculatedValue.toFixed(4); // Format to 4 decimal places
+                    td.textContent = calculatedValue.toFixed(4);
                 } else {
                     td.textContent = 'N/A';
                 }
             } else {
                 td.textContent = record[headerText] !== undefined && record[headerText] !== null ? record[headerText] : '';
-                // Ensure ef_odds is displayed with correct precision if it's a float
                 if (headerText === 'ef_odds' && !isNaN(parseFloat(td.textContent))) {
                     td.textContent = parseFloat(td.textContent).toFixed(4);
                 }
@@ -109,33 +110,45 @@ function renderTable(recordsToDisplay) {
  */
 async function initialLoadData() {
     const container = document.getElementById(TABLE_CONTAINER_ID);
-    container.innerHTML = '<p>Loading data...</p>';
+    if (container) {
+        container.innerHTML = '<p>Loading data...</p>';
+    } else {
+        console.error('Error: Table container element not found on initial load.');
+        return;
+    }
 
     try {
+        console.log('Attempting to fetch data from API...'); // New log
         const response = await fetch(API_URL, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Access-Key': JSONBIN_ACCESS_KEY
+                // Conditionally add X-Access-Key if it's not 'null' or empty string
+                // This can help with some stricter environments
+                ...(JSONBIN_ACCESS_KEY && JSONBIN_ACCESS_KEY !== 'null' ? { 'X-Access-Key': JSONBIN_ACCESS_KEY } : {})
             }
         });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error('API response not OK:', response.status, errorData); // More detailed error log
             throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || response.statusText}`);
         }
 
         const data = await response.json();
+        console.log('API data fetched successfully. Raw data:', data); // New log
         globalOriginalRecords = data?.record?.data || [];
         
-        // Initially, displayed records are the same as original records
-        globalDisplayedRecords = JSON.parse(JSON.stringify(globalOriginalRecords)); // Deep copy to prevent modifying original records directly
+        globalDisplayedRecords = JSON.parse(JSON.stringify(globalOriginalRecords));
 
         renderTable(globalDisplayedRecords);
+        console.log('Initial table rendering complete.'); // New log
 
     } catch (error) {
         console.error('Error fetching or processing data:', error);
-        container.innerHTML = `<p>Failed to load data: ${error.message}</p>`;
+        if (container) {
+            container.innerHTML = `<p>Failed to load data: ${error.message}</p>`;
+        }
     }
 }
 
@@ -143,7 +156,12 @@ async function initialLoadData() {
  * Toggles the enhanced mode (filter and adjust ef_odds) or resets to original data.
  */
 function handleToggleEfOdds() {
+    console.log('Button clicked! Current enhanced mode active:', isEnhancedModeActive); // New log
     const adjustButton = document.getElementById('apply-ef-odds-button');
+    if (!adjustButton) {
+        console.error('Error: Adjust button element not found.');
+        return; // Exit if button isn't found
+    }
 
     if (!isEnhancedModeActive) { // Currently in normal mode, switch to enhanced
         let filteredAndModifiedRecords = globalOriginalRecords.filter(record => {
@@ -151,37 +169,47 @@ function handleToggleEfOdds() {
             return !isNaN(efOdds) && efOdds >= 3.5;
         });
 
-        // Apply +25% only if it hasn't been applied in this cycle yet
         if (!hasEfOddsBeenAppliedOnce) {
+            console.log('Applying +25% to ef_odds for filtered records...'); // New log
             filteredAndModifiedRecords = filteredAndModifiedRecords.map(record => {
-                const newRecord = { ...record }; // Create a shallow copy
+                const newRecord = { ...record };
                 newRecord.ef_odds = parseFloat(newRecord.ef_odds) * 1.25;
                 return newRecord;
             });
-            hasEfOddsBeenAppliedOnce = true; // Mark as applied
+            hasEfOddsBeenAppliedOnce = true;
+        } else {
+            console.log('+25% already applied in this cycle. Skipping re-application.'); // New log
         }
         
         globalDisplayedRecords = filteredAndModifiedRecords;
         isEnhancedModeActive = true;
         adjustButton.textContent = 'Reset & Show All';
-        adjustButton.style.backgroundColor = '#f44336'; // Change button color to red for "off" state
+        adjustButton.style.backgroundColor = '#f44336';
+        console.log('Switched to enhanced mode. Displaying filtered and modified data.'); // New log
     } else { // Currently in enhanced mode, switch back to normal
-        globalDisplayedRecords = JSON.parse(JSON.stringify(globalOriginalRecords)); // Reset to original data
+        console.log('Resetting to original data...'); // New log
+        globalDisplayedRecords = JSON.parse(JSON.stringify(globalOriginalRecords));
         isEnhancedModeActive = false;
-        hasEfOddsBeenAppliedOnce = false; // Reset flag for next activation
+        hasEfOddsBeenAppliedOnce = false;
         adjustButton.textContent = 'Activate Filter & Enhance';
-        adjustButton.style.backgroundColor = '#4CAF50'; // Change button color back to green for "on" state
+        adjustButton.style.backgroundColor = '#4CAF50';
+        console.log('Switched to normal mode. Displaying all original data.'); // New log
     }
 
-    renderTable(globalDisplayedRecords); // Re-render the table with the new state
+    renderTable(globalDisplayedRecords);
+    console.log('Table re-rendered.'); // New log
 }
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-    initialLoadData(); // Load and display data initially
+    console.log('DOM Content Loaded. Initializing data load and button listener.'); // New log
+    initialLoadData();
 
     const adjustButton = document.getElementById('apply-ef-odds-button');
     if (adjustButton) {
         adjustButton.addEventListener('click', handleToggleEfOdds);
+        console.log('Button event listener attached successfully.'); // New log
+    } else {
+        console.error('Error: Button with ID "apply-ef-odds-button" not found on DOMContentLoaded.'); // New log
     }
 });
